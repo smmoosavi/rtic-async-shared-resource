@@ -25,11 +25,11 @@ impl<T> AsyncOption<T> {
         self.inner.try_set(item)
     }
 
-    pub fn wait_for_value(&self) -> impl Future<Output = T>
+    pub fn wait_for_value(&self) -> impl Future<Output = T> + '_
     where
         T: Clone,
     {
-        WaitForValueFuture::new(self.inner.clone())
+        WaitForValueFuture::new(&self.inner)
     }
 }
 

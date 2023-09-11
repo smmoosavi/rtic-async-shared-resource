@@ -1,16 +1,16 @@
 use super::inner::AsyncOptionInner;
 
-pub struct WaitForValueFuture<T> {
-    inner: AsyncOptionInner<T>,
+pub struct WaitForValueFuture<'a, T> {
+    inner: &'a AsyncOptionInner<T>,
 }
 
-impl<T> WaitForValueFuture<T> {
-    pub(super) fn new(inner: AsyncOptionInner<T>) -> Self {
+impl<'a, T> WaitForValueFuture<'a, T> {
+    pub(super) fn new(inner: &'a AsyncOptionInner<T>) -> Self {
         Self { inner }
     }
 }
 
-impl<T: Clone> core::future::Future for WaitForValueFuture<T> {
+impl<'a, T: Clone> core::future::Future for WaitForValueFuture<'a, T> {
     type Output = T;
 
     fn poll(

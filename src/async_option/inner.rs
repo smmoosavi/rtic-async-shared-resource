@@ -1,16 +1,15 @@
-use alloc::sync::Arc;
 use rtic_sync::arbiter::Arbiter;
 
 pub(super) struct AsyncOptionInner<T> {
-    value: Arc<Arbiter<Option<T>>>,
-    waker: Arc<Arbiter<Option<core::task::Waker>>>,
+    value: Arbiter<Option<T>>,
+    waker: Arbiter<Option<core::task::Waker>>,
 }
 
 impl<T> AsyncOptionInner<T> {
     pub(super) fn new(value: Option<T>) -> Self {
         AsyncOptionInner {
-            value: Arc::new(Arbiter::new(value)),
-            waker: Arc::new(Arbiter::new(None)),
+            value: Arbiter::new(value),
+            waker: Arbiter::new(None),
         }
     }
 
@@ -41,15 +40,6 @@ impl<T> AsyncOptionInner<T> {
     pub(super) fn set_waker(&self, new_waker: core::task::Waker) {
         if let Some(mut waker) = self.waker.try_access() {
             *waker = Some(new_waker);
-        }
-    }
-}
-
-impl<T> Clone for AsyncOptionInner<T> {
-    fn clone(&self) -> Self {
-        AsyncOptionInner {
-            value: self.value.clone(),
-            waker: self.waker.clone(),
         }
     }
 }
