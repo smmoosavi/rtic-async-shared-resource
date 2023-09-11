@@ -17,16 +17,10 @@ impl<T: Clone> core::future::Future for WaitForValueFuture<T> {
         self: core::pin::Pin<&mut Self>,
         cx: &mut core::task::Context<'_>,
     ) -> core::task::Poll<Self::Output> {
-        let inner = self.inner.value.try_borrow_mut();
-        let waker = self.inner.waker.try_borrow_mut();
-        if let Ok(inner) = inner {
-            if let Some(item) = inner.clone() {
-                return core::task::Poll::Ready(item);
-            }
+        if let Some(item) = self.inner.try_get() {
+            return core::task::Poll::Ready(item);
         }
-        if let Ok(mut waker) = waker {
-            *waker = Some(cx.waker().clone());
-        }
+        self.inner.set_waker(cx.waker().clone());
         core::task::Poll::Pending
     }
 }
