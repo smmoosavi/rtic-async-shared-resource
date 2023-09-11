@@ -1,6 +1,8 @@
 use crate::async_option::inner::AsyncOptionInner;
+use crate::async_option::wait_for_value_future::WaitForValueFuture;
 
 mod inner;
+mod wait_for_value_future;
 
 pub struct AsyncOption<T> {
     inner: AsyncOptionInner<T>,
@@ -21,34 +23,12 @@ impl<T> AsyncOption<T> {
     pub fn try_set(&self, item: T) -> Result<(), T> {
         self.inner.try_set(item)
     }
-}
 
-impl<T> Clone for AsyncOption<T> {
-    fn clone(&self) -> Self {
-        AsyncOption {
-            inner: self.inner.clone(),
-        }
-    }
-}
-
-impl<T: Clone> core::future::Future for AsyncOption<T> {
-    type Output = T;
-
-    fn poll(
-        self: core::pin::Pin<&mut Self>,
-        cx: &mut core::task::Context<'_>,
-    ) -> core::task::Poll<Self::Output> {
-        let inner = self.inner.value.try_borrow_mut();
-        let waker = self.inner.waker.try_borrow_mut();
-        if let Ok(inner) = inner {
-            if let Some(item) = inner.clone() {
-                return core::task::Poll::Ready(item);
-            }
-        }
-        if let Ok(mut waker) = waker {
-            *waker = Some(cx.waker().clone());
-        }
-        core::task::Poll::Pending
+    pub fn wait_for_value(&self) -> WaitForValueFuture<T>
+    where
+        T: Clone,
+    {
+        WaitForValueFuture::new(self.inner.clone())
     }
 }
 
@@ -63,56 +43,27 @@ mod tests {
     #[async_std::test]
     async fn test_some_should_be_ready() {
         let option = super::AsyncOption::ready(1);
-        assert_eq!(option.await, 1);
-    }
-
-    #[async_std::test]
-    async fn test_none_should_be_pending_until_set() {
-        let option = super::AsyncOption::pending();
-        let ctrl = async {
-            let option = option.clone();
-            println!("ctrl: release");
-            yield_now().await;
-            println!("ctrl: set");
-            option.try_set(1).ok();
-            println!("ctrl: release");
-            yield_now().await;
-            println!("ctrl: done");
-        };
-        let run = async {
-            let option = option.clone();
-            println!("run: wait");
-            assert_eq!(option.await, 1);
-            println!("run: done");
-        };
-        ctrl.join(run).await;
-        // output:
-        // ctrl: release
-        // run: wait
-        // ctrl: set
-        // ctrl: release
-        // run: done
-        // ctrl: done
+        assert_eq!(option.wait_for_value().await, 1);
     }
 
     #[async_std::test]
     async fn test_with_mutex() {
-        let option = MockMutex::new(super::AsyncOption::pending());
+        let mtx = MockMutex::new(super::AsyncOption::pending());
         let ctrl = async {
-            let mut option = option.clone();
+            let mut mtx = mtx.clone();
             println!("ctrl: release");
             yield_now().await;
             println!("ctrl: set");
-            option.lock(|option| option.try_set(1).ok());
+            mtx.lock(|option| option.try_set(1).ok());
             println!("ctrl: release");
             yield_now().await;
             println!("ctrl: done");
         };
 
         let run = async {
-            let mut option = option.clone();
+            let mut mtx = mtx.clone();
             println!("run: wait");
-            assert_eq!(option.lock(|option| option.clone()).await, 1);
+            assert_eq!(mtx.lock(|option| option.wait_for_value()).await, 1);
             println!("run: done");
         };
 
@@ -128,27 +79,27 @@ mod tests {
 
     #[async_std::test]
     async fn test_can_be_waited_multiple_time() {
-        let option = super::AsyncOption::pending();
+        let mtx = MockMutex::new(super::AsyncOption::pending());
         let ctrl = async {
-            let option = option.clone();
+            let mut mtx = mtx.clone();
             println!("ctrl: release");
             yield_now().await;
             println!("ctrl: set");
-            option.try_set(1).ok();
+            mtx.lock(|option| option.try_set(1).ok());
             println!("ctrl: release");
             yield_now().await;
             println!("ctrl: done");
         };
         let run1 = async {
-            let option = option.clone();
+            let mut mtx = mtx.clone();
             println!("run1: wait");
-            assert_eq!(option.await, 1);
+            assert_eq!(mtx.lock(|option| option.wait_for_value()).await, 1);
             println!("run1: done");
         };
         let run2 = async {
-            let option = option.clone();
+            let mut mtx = mtx.clone();
             println!("run2: wait");
-            assert_eq!(option.await, 1);
+            assert_eq!(mtx.lock(|option| option.wait_for_value()).await, 1);
             println!("run2: done");
         };
         ctrl.join(run1).join(run2).await;
