@@ -1,16 +1,15 @@
-use alloc::rc::Rc;
-use core::cell::RefCell;
+use crate::async_option::inner::AsyncOptionInner;
+
+mod inner;
 
 pub struct AsyncOption<T> {
-    inner: Rc<RefCell<Option<T>>>,
-    waker: Rc<RefCell<Option<core::task::Waker>>>,
+    inner: AsyncOptionInner<T>,
 }
 
 impl<T> AsyncOption<T> {
     pub fn new(value: Option<T>) -> Self {
         AsyncOption {
-            inner: Rc::new(RefCell::new(value)),
-            waker: Rc::new(RefCell::new(None)),
+            inner: AsyncOptionInner::new(value),
         }
     }
     pub fn ready(item: T) -> Self {
@@ -20,14 +19,7 @@ impl<T> AsyncOption<T> {
         AsyncOption::new(None)
     }
     pub fn try_set(&self, item: T) -> Result<(), T> {
-        let Ok(mut inner) = self.inner.try_borrow_mut() else {
-            return Err(item);
-        };
-        *inner = Some(item);
-        if let Some(waker) = self.waker.borrow_mut().take() {
-            waker.wake();
-        }
-        Ok(())
+        self.inner.try_set(item)
     }
 }
 
@@ -35,7 +27,6 @@ impl<T> Clone for AsyncOption<T> {
     fn clone(&self) -> Self {
         AsyncOption {
             inner: self.inner.clone(),
-            waker: self.waker.clone(),
         }
     }
 }
@@ -47,8 +38,8 @@ impl<T: Clone> core::future::Future for AsyncOption<T> {
         self: core::pin::Pin<&mut Self>,
         cx: &mut core::task::Context<'_>,
     ) -> core::task::Poll<Self::Output> {
-        let inner = self.inner.try_borrow_mut();
-        let waker = self.waker.try_borrow_mut();
+        let inner = self.inner.value.try_borrow_mut();
+        let waker = self.inner.waker.try_borrow_mut();
         if let Ok(inner) = inner {
             if let Some(item) = inner.clone() {
                 return core::task::Poll::Ready(item);
