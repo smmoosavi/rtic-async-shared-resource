@@ -19,11 +19,15 @@ impl<T> AsyncOption<T> {
     pub fn pending() -> Self {
         AsyncOption::new(None)
     }
-    pub fn set(&self, item: T) {
-        *self.inner.borrow_mut() = Some(item);
+    pub fn try_set(&self, item: T) -> Result<(), T> {
+        let Ok(mut inner) = self.inner.try_borrow_mut() else {
+            return Err(item);
+        };
+        *inner = Some(item);
         if let Some(waker) = self.waker.borrow_mut().take() {
             waker.wake();
         }
+        Ok(())
     }
 }
 
@@ -79,7 +83,7 @@ mod tests {
             println!("ctrl: release");
             yield_now().await;
             println!("ctrl: set");
-            option.set(1);
+            option.try_set(1).ok();
             println!("ctrl: release");
             yield_now().await;
             println!("ctrl: done");
@@ -108,7 +112,7 @@ mod tests {
             println!("ctrl: release");
             yield_now().await;
             println!("ctrl: set");
-            option.lock(|option| option.set(1));
+            option.lock(|option| option.try_set(1).ok());
             println!("ctrl: release");
             yield_now().await;
             println!("ctrl: done");
@@ -139,7 +143,7 @@ mod tests {
             println!("ctrl: release");
             yield_now().await;
             println!("ctrl: set");
-            option.set(1);
+            option.try_set(1).ok();
             println!("ctrl: release");
             yield_now().await;
             println!("ctrl: done");
