@@ -36,7 +36,7 @@ impl<T> Clone for AsyncOption<T> {
     }
 }
 
-impl<T> core::future::Future for AsyncOption<T> {
+impl<T: Clone> core::future::Future for AsyncOption<T> {
     type Output = T;
 
     fn poll(
@@ -45,8 +45,8 @@ impl<T> core::future::Future for AsyncOption<T> {
     ) -> core::task::Poll<Self::Output> {
         let inner = self.inner.try_borrow_mut();
         let waker = self.waker.try_borrow_mut();
-        if let Ok(mut inner) = inner {
-            if let Some(item) = inner.take() {
+        if let Ok(inner) = inner {
+            if let Some(item) = inner.clone() {
                 return core::task::Poll::Ready(item);
             }
         }
@@ -128,6 +128,44 @@ mod tests {
         // ctrl: set
         // ctrl: release
         // run: done
+        // ctrl: done
+    }
+
+    #[async_std::test]
+    async fn test_can_be_waited_multiple_time() {
+        let option = super::AsyncOption::pending();
+        let ctrl = async {
+            let option = option.clone();
+            println!("ctrl: release");
+            yield_now().await;
+            println!("ctrl: set");
+            option.set(1);
+            println!("ctrl: release");
+            yield_now().await;
+            println!("ctrl: done");
+        };
+        let run1 = async {
+            let option = option.clone();
+            println!("run1: wait");
+            assert_eq!(option.await, 1);
+            println!("run1: done");
+        };
+        let run2 = async {
+            let option = option.clone();
+            println!("run2: wait");
+            assert_eq!(option.await, 1);
+            println!("run2: done");
+        };
+        ctrl.join(run1).join(run2).await;
+
+        // output:
+        // ctrl: release
+        // run1: wait
+        // run2: wait
+        // ctrl: set
+        // ctrl: release
+        // run1: done
+        // run2: done
         // ctrl: done
     }
 }
