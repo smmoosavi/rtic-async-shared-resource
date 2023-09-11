@@ -1,16 +1,16 @@
-use alloc::rc::Rc;
-use core::cell::RefCell;
+use alloc::sync::Arc;
+use rtic_sync::arbiter::Arbiter;
 
 pub(super) struct AsyncOptionInner<T> {
-    value: Rc<RefCell<Option<T>>>,
-    waker: Rc<RefCell<Option<core::task::Waker>>>,
+    value: Arc<Arbiter<Option<T>>>,
+    waker: Arc<Arbiter<Option<core::task::Waker>>>,
 }
 
 impl<T> AsyncOptionInner<T> {
     pub(super) fn new(value: Option<T>) -> Self {
         AsyncOptionInner {
-            value: Rc::new(RefCell::new(value)),
-            waker: Rc::new(RefCell::new(None)),
+            value: Arc::new(Arbiter::new(value)),
+            waker: Arc::new(Arbiter::new(None)),
         }
     }
 
@@ -18,11 +18,11 @@ impl<T> AsyncOptionInner<T> {
     where
         T: Clone,
     {
-        let inner = self.value.try_borrow().ok()?;
+        let inner = self.value.try_access()?;
         inner.clone()
     }
     pub(super) fn try_set(&self, item: T) -> Result<(), T> {
-        let Ok(mut inner) = self.value.try_borrow_mut() else {
+        let Some(mut inner) = self.value.try_access() else {
             return Err(item);
         };
         *inner = Some(item);
@@ -31,7 +31,7 @@ impl<T> AsyncOptionInner<T> {
     }
 
     pub(super) fn try_wake(&self) {
-        if let Ok(waker) = self.waker.try_borrow_mut() {
+        if let Some(waker) = self.waker.try_access() {
             if let Some(waker) = waker.as_ref() {
                 waker.wake_by_ref();
             }
@@ -39,7 +39,7 @@ impl<T> AsyncOptionInner<T> {
     }
 
     pub(super) fn set_waker(&self, new_waker: core::task::Waker) {
-        if let Ok(mut waker) = self.waker.try_borrow_mut() {
+        if let Some(mut waker) = self.waker.try_access() {
             *waker = Some(new_waker);
         }
     }

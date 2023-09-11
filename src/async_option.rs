@@ -116,10 +116,9 @@ mod tests {
         // ctrl: done
     }
 
-    // AsyncOption is not Send, because it contains Rc.
-    // #[test]
-    // fn test_type_is_send() {
-    //     fn is_send<T: Send>() {}
-    //     is_send::<super::AsyncOption<u32>>();
-    // }
+    #[test]
+    fn test_type_is_send() {
+        fn is_send<T: Send>() {}
+        is_send::<super::AsyncOption<u32>>();
+    }
 }
