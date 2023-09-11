@@ -1,5 +1,6 @@
 use crate::async_option::inner::AsyncOptionInner;
 use crate::async_option::wait_for_value_future::WaitForValueFuture;
+use core::future::Future;
 
 mod inner;
 mod wait_for_value_future;
@@ -24,7 +25,7 @@ impl<T> AsyncOption<T> {
         self.inner.try_set(item)
     }
 
-    pub fn wait_for_value(&self) -> WaitForValueFuture<T>
+    pub fn wait_for_value(&self) -> impl Future<Output = T>
     where
         T: Clone,
     {
