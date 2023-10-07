@@ -3,7 +3,7 @@
 This is an experiment to use async shared resources in RTIC. In many cases, we
 need a shared value that we can mutate in one task and read in another task.
 `AsyncOption` is an example struct that uses shared resources internally.
-multiple implementation of shared resource is tested in this repo.
+multiple implementations of a shared resource is tested in this repo.
 
 ## `AsyncOption`
 
@@ -84,6 +84,38 @@ assert_eq!(mtx.lock(|option| option.wait_for_value()).await, 1);
 ```
 
 [code][code-arbiter-ref]
+
+## `ValueContainer`
+
+`ValueContainer` is a struct that can be waited for changes in its value.
+
+```rust
+impl ValueContainer<T> {
+  fn new(value: T) -> Self {}
+  fn get_value(&self) -> T {}
+  fn set_value(&self, value: T) {}
+  fn wait_for_change(&self) -> impl Future<Output = T> where T: Clone + PartialEq<T> {}
+}
+```
+
+example usage:
+
+```rust
+    #[task(shared = [container], priority = 1)]
+    async fn task1(mut ctx: task1::Context) {
+        let container = ctx.shared.container;
+        assert_eq!(container.lock(|container| container.wait_for_change()).await, 1);
+    }
+
+    #[task(shared = [container], priority = 1)]
+    async fn task2(mut ctx: task2::Context) {
+        let container = ctx.shared.container;
+        container.lock(|container| container.set_value(1));
+    }
+```
+
+Same as `AsyncOption`, to implement `ValueContainer` we need a shared resource
+that can be mutated in one task and be read in another task.
 
 [rtic-share]:
   https://rtic.rs/2/book/en/by-example/resources.html#shared-resources-and-lock

@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 rtic-sync = "1"
+pin-project = "1"
 
 [dev-dependencies]
 rtic-core = "1"
