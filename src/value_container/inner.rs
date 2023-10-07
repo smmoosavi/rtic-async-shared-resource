@@ -1,17 +1,16 @@
-use alloc::sync::Arc;
 use core::task::Waker;
 use rtic_sync::arbiter::Arbiter;
 
 pub struct ValueContainerInner<V> {
-    pub(super) value: Arc<Arbiter<V>>,
-    pub(super) waker: Arc<Arbiter<Option<Waker>>>,
+    pub(super) value: Arbiter<V>,
+    pub(super) waker: Arbiter<Option<Waker>>,
 }
 
 impl<T> ValueContainerInner<T> {
     pub(super) fn new(value: T) -> Self {
         Self {
-            value: Arc::new(Arbiter::new(value)),
-            waker: Arc::new(Arbiter::new(None)),
+            value: Arbiter::new(value),
+            waker: Arbiter::new(None),
         }
     }
 
@@ -23,7 +22,7 @@ impl<T> ValueContainerInner<T> {
         }
     }
 
-    pub(super) fn set_waker(&mut self, waker: Waker) {
+    pub(super) fn set_waker(&self, waker: Waker) {
         if let Some(mut inner_waker) = self.waker.try_access() {
             *inner_waker = Some(waker);
         }
@@ -46,17 +45,5 @@ impl<T> ValueContainerInner<T> {
         self.value
             .try_access()
             .map(|inner_value| inner_value.clone())
-    }
-}
-
-impl<T> Clone for ValueContainerInner<T>
-where
-    T: Clone,
-{
-    fn clone(&self) -> Self {
-        Self {
-            value: self.value.clone(),
-            waker: self.waker.clone(),
-        }
     }
 }

@@ -22,13 +22,13 @@ where
 
     pub fn set_value(&mut self, value: V) -> set_value_future::SetValueFuture<V> {
         self.value = value;
-        set_value_future::SetValueFuture::new(self.value.clone(), self.inner.clone())
+        set_value_future::SetValueFuture::new(self.value.clone(), &self.inner)
     }
     pub fn wait_for_change(&self) -> change_future::ChangeFuture<V>
     where
         V: PartialEq<V>,
     {
-        change_future::ChangeFuture::new(Some(self.value.clone()), self.inner.clone())
+        change_future::ChangeFuture::new(Some(self.value.clone()), &self.inner)
     }
 }
 
@@ -51,14 +51,6 @@ mod tests {
         let mut value = ValueContainer::new(0);
         value.set_value(1);
         assert_eq!(value.get_value(), 1);
-    }
-
-    #[async_std::test]
-    async fn test_wait_for_change() {
-        let mut value = ValueContainer::new(0);
-        let change_future = value.wait_for_change();
-        value.set_value(1);
-        assert_eq!(change_future.await, 1);
     }
 
     #[async_std::test]
@@ -94,8 +86,7 @@ mod tests {
         let ctrl = async {
             let mut mtx = mtx.clone();
             println!("ctrl: take inner");
-            let inner = mtx.lock(|value| value.inner.clone());
-            let inner_ref = inner.value.try_access().unwrap();
+            let inner_ref = mtx.lock(|value| value.inner.value.try_access().unwrap());
             println!("ctrl: release");
             yield_now().await;
             println!("ctrl: set 1");
@@ -138,8 +129,7 @@ mod tests {
         let ctrl = async {
             let mut mtx = mtx.clone();
             println!("ctrl: take inner");
-            let inner = mtx.lock(|value| value.inner.clone());
-            let inner_ref = inner.value.try_access().unwrap();
+            let inner_ref = mtx.lock(|value| value.inner.value.try_access().unwrap());
             println!("ctrl: release");
             yield_now().await;
             println!("ctrl: drop inner");

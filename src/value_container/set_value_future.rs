@@ -4,13 +4,13 @@ use core::task::{Context, Poll};
 use pin_project::pin_project;
 
 #[pin_project]
-pub struct SetValueFuture<T> {
-    inner: ValueContainerInner<T>,
+pub struct SetValueFuture<'a, T> {
+    inner: &'a ValueContainerInner<T>,
     value: Option<T>,
 }
 
-impl<T> SetValueFuture<T> {
-    pub(super) fn new(value: T, inner: ValueContainerInner<T>) -> Self {
+impl<'a, T> SetValueFuture<'a, T> {
+    pub(super) fn new(value: T, inner: &'a ValueContainerInner<T>) -> Self {
         let res = inner.try_set_value(value);
         match res {
             Ok(_) => Self { inner, value: None },
@@ -22,7 +22,7 @@ impl<T> SetValueFuture<T> {
     }
 }
 
-impl<T> Future for SetValueFuture<T>
+impl<'a, T> Future for SetValueFuture<'a, T>
 where
     T: Clone,
 {

@@ -8,16 +8,16 @@ use super::inner::ValueContainerInner;
 
 #[must_use = "futures do nothing unless you `.await` or poll them"]
 #[pin_project]
-pub struct ChangeFuture<T> {
+pub struct ChangeFuture<'a, T> {
     initial_value: Option<T>,
-    inner: ValueContainerInner<T>,
+    inner: &'a ValueContainerInner<T>,
 }
 
-impl<T> ChangeFuture<T>
+impl<'a, T> ChangeFuture<'a, T>
 where
     T: Clone,
 {
-    pub fn new(initial_value: Option<T>, inner: ValueContainerInner<T>) -> Self {
+    pub fn new(initial_value: Option<T>, inner: &'a ValueContainerInner<T>) -> Self {
         Self {
             initial_value,
             inner,
@@ -25,7 +25,7 @@ where
     }
 }
 
-impl<T> Future for ChangeFuture<T>
+impl<'a, T> Future for ChangeFuture<'a, T>
 where
     T: Clone + PartialEq<T>,
 {
