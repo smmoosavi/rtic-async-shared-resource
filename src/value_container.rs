@@ -95,7 +95,7 @@ mod tests {
             let mut mtx = mtx.clone();
             println!("ctrl: take inner");
             let inner = mtx.lock(|value| value.inner.clone());
-            let inner_ref = inner.value.borrow();
+            let inner_ref = inner.value.try_access().unwrap();
             println!("ctrl: release");
             yield_now().await;
             println!("ctrl: set 1");
@@ -139,7 +139,7 @@ mod tests {
             let mut mtx = mtx.clone();
             println!("ctrl: take inner");
             let inner = mtx.lock(|value| value.inner.clone());
-            let inner_ref = inner.value.borrow();
+            let inner_ref = inner.value.try_access().unwrap();
             println!("ctrl: release");
             yield_now().await;
             println!("ctrl: drop inner");

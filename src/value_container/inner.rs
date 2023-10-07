@@ -1,22 +1,22 @@
-use alloc::rc::Rc;
-use core::cell::RefCell;
+use alloc::sync::Arc;
 use core::task::Waker;
+use rtic_sync::arbiter::Arbiter;
 
 pub struct ValueContainerInner<V> {
-    pub(super) value: Rc<RefCell<V>>,
-    pub(super) waker: Rc<RefCell<Option<Waker>>>,
+    pub(super) value: Arc<Arbiter<V>>,
+    pub(super) waker: Arc<Arbiter<Option<Waker>>>,
 }
 
 impl<T> ValueContainerInner<T> {
     pub(super) fn new(value: T) -> Self {
         Self {
-            value: Rc::new(RefCell::new(value)),
-            waker: Rc::new(RefCell::new(None)),
+            value: Arc::new(Arbiter::new(value)),
+            waker: Arc::new(Arbiter::new(None)),
         }
     }
 
     pub(super) fn wake(&self) {
-        if let Ok(inner_waker) = self.waker.try_borrow() {
+        if let Some(inner_waker) = self.waker.try_access() {
             if let Some(waker) = inner_waker.as_ref() {
                 waker.wake_by_ref();
             }
@@ -24,13 +24,13 @@ impl<T> ValueContainerInner<T> {
     }
 
     pub(super) fn set_waker(&mut self, waker: Waker) {
-        if let Ok(mut inner_waker) = self.waker.try_borrow_mut() {
+        if let Some(mut inner_waker) = self.waker.try_access() {
             *inner_waker = Some(waker);
         }
     }
 
     pub(super) fn try_set_value(&self, value: T) -> Result<(), T> {
-        if let Ok(mut inner_value) = self.value.try_borrow_mut() {
+        if let Some(mut inner_value) = self.value.try_access() {
             *inner_value = value;
             self.wake();
             Ok(())
@@ -43,11 +43,9 @@ impl<T> ValueContainerInner<T> {
     where
         T: Clone,
     {
-        if let Ok(inner_value) = self.value.try_borrow() {
-            Some(inner_value.clone())
-        } else {
-            None
-        }
+        self.value
+            .try_access()
+            .map(|inner_value| inner_value.clone())
     }
 }
 

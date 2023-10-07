@@ -54,7 +54,7 @@ where
     T: Clone + PartialEq<T>,
 {
     let initial_value = initial_value?;
-    let inner_value = inner.value.try_borrow().ok()?;
+    let inner_value = inner.value.try_access()?;
     if *inner_value != *initial_value {
         Some(inner_value.clone())
     } else {
