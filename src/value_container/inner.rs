@@ -1,5 +1,5 @@
-use alloc::sync::Arc;
 use core::task::Waker;
+use portable_atomic_util::Arc;
 use rtic_sync::arbiter::Arbiter;
 
 pub struct ValueContainerInner<V> {

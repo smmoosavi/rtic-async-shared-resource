@@ -1,4 +1,4 @@
-use alloc::sync::Arc;
+use portable_atomic_util::Arc;
 use rtic_sync::arbiter::Arbiter;
 
 pub(super) struct AsyncOptionInner<T> {
