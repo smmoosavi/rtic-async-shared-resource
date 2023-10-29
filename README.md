@@ -68,6 +68,13 @@ use alloc::sync::Arc;
 
 [code][code-arbiter-arc]
 
+I found [portable-atomic-util] crate that provides `Arc` type for
+`thumbv6m-none-eabi`. It uses [portable-atomic] crate internally. rtic use
+[atomic-polyfill] which is deprecated and encourages to use [portable-atomic]
+instead.
+
+[code][code-arbiter-portable-arc]
+
 ### `Arbiter` ref
 
 If we have a reference to `Arbiter`, we can mutate its value without a mutable
@@ -124,5 +131,10 @@ that can be mutated in one task and be read in another task.
   https://github.com/smmoosavi/rtic-async-shared-resource/tree/rc-refcell/src
 [code-arbiter-arc]:
   https://github.com/smmoosavi/rtic-async-shared-resource/tree/arbiter-arc/src
+[code-arbiter-portable-arc]:
+  https://github.com/smmoosavi/rtic-async-shared-resource/tree/arbiter-portable-arc/src
 [code-arbiter-ref]:
   https://github.com/smmoosavi/rtic-async-shared-resource/tree/arbiter-ref/src
+[portable-atomic-util]: https://crates.io/crates/portable-atomic-util
+[portable-atomic]: https://crates.io/crates/portable-atomic
+[atomic-polyfill]: https://crates.io/crates/atomic-polyfill
